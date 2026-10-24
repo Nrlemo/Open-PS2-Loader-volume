@@ -35,6 +35,7 @@
 #include "cheat_api.h"
 #include "cd_igr_rpc.h"
 #include "coreconfig.h"
+#include "volume_rpc.h"
 
 /* scePadPortOpen & scePad2CreateSocket prototypes */
 static int (*scePadPortOpen)(int port, int slot, void *addr);
@@ -49,6 +50,68 @@ static powerbuttondata_t Power_Button;
 /* IGR Thread ID and interrupt handler */
 static int IGR_Thread_ID = -1;
 static int IGR_Intc_ID = -1;
+
+/* In-game master-volume RPC state. */
+static SifRpcClientData_t VolumeControlRpcClient __attribute__((aligned(64)));
+static u32 VolumeControlRpcArgs[16] __attribute__((aligned(64)));
+static int VolumeControlRpcPending;
+static int VolumeControlBindDelay;
+static int GameVolumePercent = 100;
+static u8 VolumeUpWasPressed;
+static u8 VolumeDownWasPressed;
+
+#define PAD_START_MASK 0x08
+#define PAD_R1_MASK    0x08
+#define PAD_R2_MASK    0x02
+
+static void GameVolumeControlFlush(void)
+{
+    if (VolumeControlRpcClient.server == NULL) {
+        if (VolumeControlBindDelay > 0) {
+            VolumeControlBindDelay--;
+            return;
+        }
+        memset(&VolumeControlRpcClient, 0, sizeof(VolumeControlRpcClient));
+        SifBindRpc(&VolumeControlRpcClient, OPL_VOLUME_RPC_ID, 0);
+        VolumeControlBindDelay = 60;
+        return;
+    }
+
+    VolumeControlRpcArgs[0] = (u32)GameVolumePercent;
+    if (SifCallRpc(&VolumeControlRpcClient, OPL_VOLUME_RPC_SET, 0,
+                   VolumeControlRpcArgs, sizeof(VolumeControlRpcArgs[0]),
+                   NULL, 0, NULL, NULL) < 0) {
+        memset(&VolumeControlRpcClient, 0, sizeof(VolumeControlRpcClient));
+        VolumeControlBindDelay = 60;
+        return;
+    }
+    VolumeControlRpcPending = 0;
+}
+
+static void GameVolumeControlUpdate(int up_pressed, int down_pressed)
+{
+    if (up_pressed && !VolumeUpWasPressed) {
+        if (GameVolumePercent < OPL_VOLUME_MAX_PERCENT) {
+            GameVolumePercent += OPL_VOLUME_STEP;
+            if (GameVolumePercent > OPL_VOLUME_MAX_PERCENT)
+                GameVolumePercent = OPL_VOLUME_MAX_PERCENT;
+            VolumeControlRpcPending = 1;
+        }
+    } else if (down_pressed && !VolumeDownWasPressed) {
+        if (GameVolumePercent > 0) {
+            GameVolumePercent -= OPL_VOLUME_STEP;
+            if (GameVolumePercent < 0)
+                GameVolumePercent = 0;
+            VolumeControlRpcPending = 1;
+        }
+    }
+
+    VolumeUpWasPressed = up_pressed ? 1 : 0;
+    VolumeDownWasPressed = down_pressed ? 1 : 0;
+    if (VolumeControlRpcPending)
+        GameVolumeControlFlush();
+}
+
 
 /* IGR thread stack & stack size */
 #define IGR_STACK_SIZE (4 * 1024)
@@ -158,6 +221,8 @@ static void IGR_Thread(void *arg)
     u8 pad_pos_frame;
     u8 pad_pos_combo1;
     u8 pad_pos_combo2;
+    int volume_up_pressed;
+    int volume_down_pressed;
 
     (void)arg;
 
@@ -168,6 +233,8 @@ static void IGR_Thread(void *arg)
      * Poll the same controller buffer from an ordinary EE thread instead.
      */
     for (;;) {
+        volume_up_pressed = 0;
+        volume_down_pressed = 0;
         if (Pad_Data.pad_buf != NULL) {
             // Read through the uncached segment to obtain live pad data.
             pad_pos_state =
@@ -208,6 +275,15 @@ static void IGR_Thread(void *arg)
                     Pad_Data.vb_count = 0;
                 }
 
+                /* START + R1 raises volume; START + R2 lowers it.
+                 * The controller bytes are active-low. */
+                volume_up_pressed =
+                    ((pad_pos_combo2 & PAD_START_MASK) == 0) &&
+                    ((pad_pos_combo1 & PAD_R1_MASK) == 0);
+                volume_down_pressed =
+                    ((pad_pos_combo2 & PAD_START_MASK) == 0) &&
+                    ((pad_pos_combo1 & PAD_R2_MASK) == 0);
+
                 // R1 + L1 + R2 + L2
                 if (pad_pos_combo1 == IGR_COMBO_R1_L1_R2_L2) {
                     // Start + Select: reset to configured exit path.
@@ -228,6 +304,8 @@ static void IGR_Thread(void *arg)
                 }
             }
         }
+
+        GameVolumeControlUpdate(volume_up_pressed, volume_down_pressed);
 
         /*
          * Preserve the original power-button monitoring.
