@@ -82,7 +82,7 @@ IOP_OBJS =	iomanx.o filexio.o ps2fs.o usbd.o bdmevent.o \
 		sio2man.o padman.o mcman.o mcserv.o \
 		httpclient-iop.o netman.o ps2ips.o \
 		bdm_mcemu.o hdd_mcemu.o smb_mcemu.o \
-		iremsndpatch.o apemodpatch.o f2techioppatch.o cleareffects.o resetspu.o \
+		iremsndpatch.o apemodpatch.o f2techioppatch.o cleareffects.o resetspu.o volctrl.o \
 		libsd.o audsrv.o
 
 EECORE_OBJS = ee_core.o ioprp.o util.o \
@@ -469,6 +469,12 @@ modules/iopcore/resetspu/resetspu.irx: modules/iopcore/resetspu
 	$(MAKE) -C $<
 
 $(EE_ASM_DIR)resetspu.c: modules/iopcore/resetspu/resetspu.irx | $(EE_ASM_DIR)
+	$(BIN2C) $< $@ $(*F)_irx
+
+modules/iopcore/volctrl/volctrl.irx: modules/iopcore/volctrl
+	$(MAKE) -C $<
+
+$(EE_ASM_DIR)volctrl.c: modules/iopcore/volctrl/volctrl.irx | $(EE_ASM_DIR)
 	$(BIN2C) $< $@ $(*F)_irx
 
 modules/mcemu/bdm_mcemu.irx: modules/mcemu
