@@ -37,6 +37,7 @@
 #include "cd_igr_rpc.h"
 #include "coreconfig.h"
 #include "volume_rpc.h"
+#include "volume_overlay.h"
 
 /* scePadPortOpen & scePad2CreateSocket prototypes */
 static int (*scePadPortOpen)(int port, int slot, void *addr);
@@ -91,12 +92,15 @@ static void GameVolumeControlFlush(void)
 
 static void GameVolumeControlUpdate(int up_pressed, int down_pressed)
 {
+    int changed = 0;
+
     if (up_pressed && !VolumeUpWasPressed) {
         if (GameVolumePercent < OPL_VOLUME_MAX_PERCENT) {
             GameVolumePercent += OPL_VOLUME_STEP;
             if (GameVolumePercent > OPL_VOLUME_MAX_PERCENT)
                 GameVolumePercent = OPL_VOLUME_MAX_PERCENT;
             VolumeControlRpcPending = 1;
+            changed = 1;
         }
     } else if (down_pressed && !VolumeDownWasPressed) {
         if (GameVolumePercent > 0) {
@@ -104,11 +108,14 @@ static void GameVolumeControlUpdate(int up_pressed, int down_pressed)
             if (GameVolumePercent < 0)
                 GameVolumePercent = 0;
             VolumeControlRpcPending = 1;
+            changed = 1;
         }
     }
 
     VolumeUpWasPressed = up_pressed ? 1 : 0;
     VolumeDownWasPressed = down_pressed ? 1 : 0;
+    if (changed)
+        VolumeOverlaySetPercent(GameVolumePercent);
     if (VolumeControlRpcPending)
         GameVolumeControlFlush();
 }
@@ -307,6 +314,7 @@ static void IGR_Thread(void *arg)
         }
 
         GameVolumeControlUpdate(volume_up_pressed, volume_down_pressed);
+        VolumeOverlayTick();
 
         /*
          * Preserve the original power-button monitoring.
