@@ -8,7 +8,6 @@
  */
 #include <tamtypes.h>
 #include <kernel.h>
-#include <stdio.h>
 #include <string.h>
 #include "volume_overlay.h"
 
@@ -151,7 +150,22 @@ static void DrawText(u8 psm, int x, int y, const char *text,
 static void BuildOverlayImage(u8 psm, int percent)
 {
     int i, fill;
-    char text[8];
+    char text[5];
+    int digits = 0;
+    int value = percent;
+
+    if (value >= 100) {
+        text[digits++] = (char)('0' + value / 100);
+        text[digits++] = (char)('0' + (value / 10) % 10);
+        text[digits++] = (char)('0' + value % 10);
+    } else if (value >= 10) {
+        text[digits++] = (char)('0' + value / 10);
+        text[digits++] = (char)('0' + value % 10);
+    } else {
+        text[digits++] = (char)('0' + value);
+    }
+    text[digits++] = '%';
+    text[digits] = '\\0';
 
     for (i = 0; i < OVL_PIXELS; i++)
         PutPixel(i, psm, 20, 22, 30);
@@ -163,8 +177,7 @@ static void BuildOverlayImage(u8 psm, int percent)
     FillRect(psm, OVL_WIDTH - 1, 0, 1, OVL_HEIGHT, 100, 110, 130);
 
     DrawText(psm, 8, 5, "VOL", 245, 247, 255);
-    snprintf(text, sizeof(text), "%d%%", percent);
-    DrawText(psm, OVL_WIDTH - 8 - ((int)strlen(text) * 6 - 1), 5,
+    DrawText(psm, OVL_WIDTH - 8 - (digits * 6 - 1), 5,
              text, 245, 247, 255);
 
     FillRect(psm, 8, 18, 112, 8, 100, 110, 130);
