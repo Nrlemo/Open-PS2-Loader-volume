@@ -48,12 +48,12 @@ static void *VolumeControlRpcHandler(int command, void *data, int size)
 static void VolumeControlRpcThread(void *arg)
 {
     (void)arg;
-    SifInitRpc(0);
-    SifSetRpcQueue(&volume_rpc_queue, GetThreadId());
-    SifRegisterRpc(&volume_rpc_server, OPL_VOLUME_RPC_ID,
+    sceSifInitRpc(0);
+    sceSifSetRpcQueue(&volume_rpc_queue, GetThreadId());
+    sceSifRegisterRpc(&volume_rpc_server, OPL_VOLUME_RPC_ID,
                    VolumeControlRpcHandler, volume_rpc_buffer,
                    NULL, NULL, &volume_rpc_queue);
-    SifRpcLoop(&volume_rpc_queue);
+    sceSifRpcLoop(&volume_rpc_queue);
 }
 
 int _start(int argc, char *argv[])
