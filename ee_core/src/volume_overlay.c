@@ -11,8 +11,8 @@
 #include <string.h>
 #include "volume_overlay.h"
 
-#define OVL_WIDTH              128
-#define OVL_HEIGHT             32
+#define OVL_WIDTH              96
+#define OVL_HEIGHT             16
 #define OVL_PIXELS             (OVL_WIDTH * OVL_HEIGHT)
 #define OVL_MAX_IMAGE_QWORDS   (OVL_PIXELS / 4)
 #define OVL_PACKET_QWORDS      (OVL_MAX_IMAGE_QWORDS + 10)
@@ -165,7 +165,7 @@ static void BuildOverlayImage(u8 psm, int percent)
         text[digits++] = (char)('0' + value);
     }
     text[digits++] = '%';
-    text[digits] = '\\0';
+    text[digits] = '\0';
 
     for (i = 0; i < OVL_PIXELS; i++)
         PutPixel(i, psm, 20, 22, 30);
@@ -176,18 +176,18 @@ static void BuildOverlayImage(u8 psm, int percent)
     FillRect(psm, 0, 0, 1, OVL_HEIGHT, 100, 110, 130);
     FillRect(psm, OVL_WIDTH - 1, 0, 1, OVL_HEIGHT, 100, 110, 130);
 
-    DrawText(psm, 8, 5, "VOL", 245, 247, 255);
-    DrawText(psm, OVL_WIDTH - 8 - (digits * 6 - 1), 5,
+    DrawText(psm, 6, 2, "VOL", 245, 247, 255);
+    DrawText(psm, OVL_WIDTH - 6 - (digits * 6 - 1), 2,
              text, 245, 247, 255);
 
-    FillRect(psm, 8, 18, 112, 8, 100, 110, 130);
-    FillRect(psm, 9, 19, 110, 6, 35, 38, 48);
-    fill = (percent * 110) / 150;
-    if (fill > 110)
-        fill = 110;
+    FillRect(psm, 6, 9, 84, 5, 100, 110, 130);
+    FillRect(psm, 7, 10, 82, 3, 35, 38, 48);
+    fill = (percent * 82) / 150;
+    if (fill > 82)
+        fill = 82;
     if (fill < 0)
         fill = 0;
-    FillRect(psm, 9, 19, fill, 6, 40, 190, 245);
+    FillRect(psm, 7, 10, fill, 3, 40, 190, 245);
 }
 
 static int SupportedPSM(u8 psm)
