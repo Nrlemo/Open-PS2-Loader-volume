@@ -4,6 +4,7 @@ enum OPL_MODULE_ID {
     OPL_MODULE_ID_IOPRP,
     OPL_MODULE_ID_IMGDRV,
     OPL_MODULE_ID_RESETSPU,
+    OPL_MODULE_ID_VOLCTRL,
 
     // SIO2 modules (for mcemu/pademu/mx4sio)
     OPL_MODULE_ID_SIO2MAN,
