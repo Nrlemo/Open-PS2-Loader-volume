@@ -187,6 +187,9 @@ int New_Reset_Iop(const char *arg, int arglen)
             DBGCOL(0x00FFFF, IOPMGR, "ResetIopSpecial (with args) finished!");
     }
 
+    /* Load the game-volume service into the IOP used by the running title. */
+    LoadOPLModule(OPL_MODULE_ID_VOLCTRL, 0, 0, NULL);
+
     if (iop_reboot_count >= 2) {
 #ifdef PADEMU
         config->PadEmuSettings |= (LoadOPLModule(OPL_MODULE_ID_MCEMU, 0, 0, NULL) > 0) << 24;
