@@ -18,6 +18,7 @@
 
 #include <ee_regs.h>
 #include <iopcontrol.h>
+#include <sifrpc.h>
 #include "asm.h"
 #include "ee_core.h"
 #include "iopmgr.h"
