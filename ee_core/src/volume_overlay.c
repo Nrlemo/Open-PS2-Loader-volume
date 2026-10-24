@@ -287,9 +287,17 @@ static int DrawOnFramebuffer(u64 dispfb, u64 display, int percent)
     vif[3] = VIF1_NOP;
 
     total_qwords = qwords + 10;
-    chcr_state = *DMA_VIF1_CHCR;
     *GS_CSR = GS_CSR_FINISH;
     FlushCache(0);
+
+    /*
+     * Recheck immediately before claiming VIF1. A game thread can start a
+     * transfer while the overlay packet is being prepared.
+     */
+    if ((*DMA_VIF1_CHCR & 0x100) ||
+        ((*VIF1_STAT & VIF1_STAT_BUSY_MASK) != 0))
+        return 0;
+    chcr_state = *DMA_VIF1_CHCR;
 
     *DMA_VIF1_QWC = total_qwords;
     *DMA_VIF1_MADR = (u32)VolumeOverlayPacket;
